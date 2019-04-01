@@ -1,25 +1,29 @@
 'use strict';
 
-const STORE = [
+const STORE = {
+  items: [
     {id: cuid(), name: "apples", checked: false},
     {id: cuid(), name: "oranges", checked: false},
     {id: cuid(), name: "milk", checked: true},
     {id: cuid(), name: "bread", checked: false},
-];
+  ],
+  hideCompleted: false,
+  itemSearched: null,
+};
 
-function generateItemElement(item, itemIndex, template) {
-    return `
-    <li data-item-id="${item.id}">
-      <span class="shopping-item js-shopping-item ${item.checked ? "shopping-item__checked" : ''}">${item.name}</span>
-      <div class="shopping-item-controls">
-        <button class="shopping-item-toggle js-item-toggle">
-            <span class="button-label">check</span>
-        </button>
-        <button class="shopping-item-delete js-item-delete">
-            <span class="button-label">delete</span>
-        </button>
-      </div>
-    </li>`;
+function generateItemElement(item) {
+  return `
+  <li data-item-id="${item.id}">
+    <span class="shopping-item js-shopping-item ${item.checked ? "shopping-item__checked" : ''}">${item.name}</span>
+   <div class="shopping-item-controls">
+      <button class="shopping-item-toggle js-item-toggle">
+      <span class="button-label">check</span>
+    </button>
+      <button class="shopping-item-delete js-item-delete">
+        <span class="button-label">delete</span>
+    </button>
+    </div>
+  </li>`;
     }
 
 function generateShoppingItemsString(shoppingList) {
@@ -44,14 +48,26 @@ function renderShoppingList() {
     // insert the <li>'s string inside the .js-shopping-list <ul> in the DOM
     console.log('`renderShoppingList` ran');
 
-    const shoppingListItemsString = generateShoppingItemsString(STORE);
+    let filteredItems = STORE.items;
+
+    if (STORE.hideCompleted) {
+      filteredItems = filteredItems.filter(item => !item.checked);
+    }
+
+    $('.js-shopping-list-search').val(STORE.itemSearched);
+
+    if (STORE.itemSearched) {
+      filteredItems = filteredItems.filter(item => item.name.includes(STORE.itemSearched));
+    }
+
+    const shoppingListItemsString = generateShoppingItemsString(filteredItems);
 
     $('.js-shopping-list').html(shoppingListItemsString);
   }
   
   function addItemToShoppingList(itemName) {
     console.log(`Adding "${itemName}" to shopping list`);
-    STORE.push({name: itemName, checked: false});
+    STORE.items.push({id: cuid(), name: itemName, checked: false});
   }
 
   function handleNewItemSubmit() {
@@ -64,12 +80,12 @@ function renderShoppingList() {
       $('.js-shopping-list-entry').val(''); 
       addItemToShoppingList(newItemName);
       renderShoppingList();
-    })
+    });
   }
   
   function toggleCheckedForListItem(itemId) {
     console.log("Toggling checked property for item with id " + itemId);
-    const item = STORE.find(item => item.id === itemId);
+    const item = STORE.items.find(item => item.id === itemId);
     item.checked = !item.checked;
   }
 
@@ -88,13 +104,13 @@ function renderShoppingList() {
       const id = getItemIdFromElement(event.currentTarget);
       toggleCheckedForListItem(id);
       renderShoppingList();
-    })
+    });
   }
   
   function deleteItemFromList(itemId) {
     console.log("Deleting item with id " + itemId);
     // const item = STORE.find(item => item.id === itemId);
-    STORE.splice(STORE.findIndex(item => item.id === itemId), 1);
+    STORE.items.splice(STORE.items.findIndex(item => item.id === itemId), 1);
   }
 
   function handleDeleteItemClicked() {
@@ -105,7 +121,39 @@ function renderShoppingList() {
       const id = getItemIdFromElement(event.currentTarget);
       deleteItemFromList(id);
       renderShoppingList();
-    })
+    });
+  }
+
+  function toggleHideFilter() {
+    STORE.hideCompleted = !STORE.hideCompleted;
+  }
+
+  function handleToggleHideFilter() {
+    $('.js-hide-completed-toggle').on('click', () => {
+      toggleHideFilter();
+      renderShoppingList();
+    });
+  }
+
+  function inputItemSearched(searchItem) {
+    STORE.itemSearched = searchItem;
+}
+
+  function handleSearchItemSubmit() {
+    $('#js-search-list-form').submit(function(event) {
+      event.preventDefault();
+      const newSearchItem = $('.js-shopping-list-search').val();
+      console.log(newSearchItem);
+      inputItemSearched(newSearchItem);
+      renderShoppingList();
+    });
+  }
+
+  function handleClearItemSearch() {
+    $('#clear-item-search').click(function(event) {
+      inputItemSearched("");
+      renderShoppingList();
+    });
   }
   
   // this function will be our callback when the page loads. it's responsible for
@@ -117,6 +165,9 @@ function renderShoppingList() {
       handleNewItemSubmit();
       handleItemCheckClicked();
       handleDeleteItemClicked();
+      handleToggleHideFilter();
+      handleSearchItemSubmit();
+      handleClearItemSearch();
   }
 
   $(handleShoppingList);
